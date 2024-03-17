@@ -15,19 +15,20 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Tiptap } from "@/components/Tiptap.tsx;
 
 
 export default function Home() {
-  // perform validation on fields. TODO: use DOM Purifier for fields if saving to DB:
+  // perform validation on fields: TODO: use DOM Purifier for fields if saving to DB:
   const formSchema = z.object({
     title: z.string().min(5, {message: 'Title is not long enough'}),
     url: z.string().min(5, {message: 'This is neither a valid local archive path or hosted url.'}),
     description: z.string().max(100, {message: "That description is too large."}).trim(),
   });
 
-  // keep track of changes and validation with each user change. Here we should take in the fields of an omex archive.
+  // keep track of changes and validation with each user change. Here we should take in the fields of an omex archive:
   const form = useForm<z.infer<typeof formSchema>>({
-      resolver: zodResolver(formSchema),
+      resolver: zodResolver(formSchema),  // this acts as our extra validator on top of schema.
       mode: 'onChange',
       defaultValues: {
         title: 'Your OMEX/COMBINE ARCHIVE',
@@ -37,10 +38,17 @@ export default function Home() {
 
   });
 
+  // handle submission (state change):
+  function onSubmit(values: z.infer<typeof formSchema>) {
+      // TODO: add SEDML validation and editing here.
+      console.log(`THE SUBMIT: ${values.description}`);
+  }
+
+
   return (
       <main className="p-24">
         <Form {...form}>
-          <form>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
               <FormField
                 control={form.control}
                 name="title"
@@ -54,8 +62,24 @@ export default function Home() {
                     </FormItem>
                 )}
                 />
+              <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                              <Tiptap description={field.name} onChange={field.onChange} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )}
+              />
           </form>
         </Form>
+        <Button className="my-4" type={"submit"}>
+            Submit
+        </Button>
       </main>
   )
 }
