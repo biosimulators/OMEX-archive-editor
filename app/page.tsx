@@ -8,11 +8,14 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
+  FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 
 export default function Home() {
   // perform validation on fields. TODO: use DOM Purifier for fields if saving to DB:
@@ -22,13 +25,14 @@ export default function Home() {
     description: z.string().max(100, {message: "That description is too large."}).trim(),
   });
 
-  // keep track of changes and validation. Here we should take in the fields of an omex archive.
+  // keep track of changes and validation with each user change. Here we should take in the fields of an omex archive.
   const form = useForm<z.infer<typeof formSchema>>({
-    mode: 'onChange',
-    defaultValues: {
-      title: 'Your OMEX/COMBINE ARCHIVE',
-      url: 'Your URL here',
-      description: 'Please upload the omex archive.'
+      resolver: zodResolver(formSchema),
+      mode: 'onChange',
+      defaultValues: {
+        title: 'Your OMEX/COMBINE ARCHIVE',
+        url: 'Your URL here',
+        description: 'Please upload the omex archive.'
     }
 
   });
