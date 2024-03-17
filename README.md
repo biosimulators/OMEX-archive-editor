@@ -3,7 +3,7 @@
 This tooling allows users to edit OMEX/COMBINE Archives. The stack for this application uses the following technologies:
 
       - NextJS with Typescript
-      - ShadCN/UI
+      - ShadCN/UI for Component import (analogous to Material Design)
       - ReactHookForm
       - TipTap to build the form
       - Tailwind CSS
