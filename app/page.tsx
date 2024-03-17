@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Tiptap } from "@/components/Tiptap";
+import { TipTap } from "@/components/Tiptap";
 
 
 export default function Home() {
@@ -69,7 +69,7 @@ export default function Home() {
                       <FormItem>
                           <FormLabel>Description</FormLabel>
                           <FormControl>
-                              <Tiptap description={field.name} onChange={field.onChange} />
+                              <TipTap description={field.name} onChange={field.onChange} />
                           </FormControl>
                           <FormMessage />
                       </FormItem>
