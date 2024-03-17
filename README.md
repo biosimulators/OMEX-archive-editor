@@ -2,11 +2,16 @@
 
 This tooling allows users to edit OMEX/COMBINE Archives. The stack for this application uses the following technologies:
 
-      - NextJS with Typescript
+      - NextJS for React with Typescript
       - ShadCN/UI for Component import (analogous to Material Design)
       - ReactHookForm
       - TipTap to build the form
       - Tailwind CSS
+
+### Creating a new `shadCN/ui` component implementation:
+
+        npx shadcn-ui@latest add <COMPONENT TYPE ACCORDING TO SHADCN>  # <- For example, button or form or input, etc.
+
 
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
@@ -23,6 +28,8 @@ pnpm dev
 # or
 bun dev
 ```
+
+TODO: Change this to uvicorn
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
