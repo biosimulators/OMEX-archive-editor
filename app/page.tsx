@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Tiptap } from "@/components/Tiptap.tsx;
+import { Tiptap } from "@/components/Tiptap";
 
 
 export default function Home() {

@@ -30,3 +30,5 @@ export default function Tiptap({
         </div>
     )
 }
+
+export { Tiptap };
