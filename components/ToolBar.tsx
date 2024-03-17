@@ -9,5 +9,14 @@ import {
     ListOrdered,
     Heading2,
 } from "lucide-react"
+import { Toggle } from "./ui/toggle";
 
-export function ToolBar() { return null };
+type Props = {
+    editor: Editor | null
+}
+
+
+export function ToolBar({ editor }: Props) { 
+
+    return null
+};
