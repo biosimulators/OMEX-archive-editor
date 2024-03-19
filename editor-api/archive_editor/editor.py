@@ -236,6 +236,13 @@ class ArchiveEditorApi:
                         return serialized_editable_params
 
     @classmethod
+    def assert_same_archive(cls, original_archive: CombineArchive, new_archive: CombineArchive):
+        if original_archive != new_archive:
+            raise OSError('Could not update the uploaded archive contents.')
+        else:
+            return print('This change is valid')
+
+    @classmethod
     def run(
             cls,
             omex_fp: str = None,
@@ -285,7 +292,7 @@ class ArchiveEditorApi:
             changed_sed_doc=adjusted_sed_doc)
 
         # TODO: change this
-        assert edited_archive == uploaded_archive, 'Could not update the uploaded archive state.'
+        cls.assert_same_archive(uploaded_archive, edited_archive)
 
 
 def test_editor():
