@@ -119,12 +119,28 @@ class ArchiveEditorApi:
             uploaded_archive: CombineArchive,
             extraction_dir: str,
             kisao_id: str = None,
-            **changes) -> SedDocument:
+            **changes
+    ) -> SedDocument:
+        """Introspect uploaded COMBINE/OMEX file for possible changes, apply user changes, and
+            generate a new sed doc from the changes.
+
+            Args:
+                uploaded_archive:`CombineArchive`: archive from which possible changes will be inferred.
+                extraction_dir:`str`: dirpath into which the archive contents will be extracted.
+                kisao_id:`str`: id of the simulation algorithm. Defaults to `None`.
+                **changes:`kwargs`, `Dict[str, str]`: key/value change specifications where param target names are
+                    keys and new values are the values in string form.
+
+            Returns:
+                `SedDocument` instance configured with user changes.
+        """
+        # gather introspection
         introspection = cls.introspect_archive(
             uploaded_archive=uploaded_archive,
             extraction_dir=extraction_dir,
             kisao_id=kisao_id)
 
+        # make model changes
         sim_type = introspection['sim_type']
         sim_model = introspection['sim_model']
         model_lang = introspection['model_lang']
@@ -142,10 +158,15 @@ class ArchiveEditorApi:
                 new_value=str(val))
             new_model_changes.append(attribute_change)
 
-        assert sim_model.changes != new_model_changes
+        # apply changes
+        assert sim_model.changes != new_model_changes, 'Model changes are valid.'
         introspection['sim_model'].changes = new_model_changes
-        pp(introspection)
-        # TODO: Create sed doc
+
+        sed_doc = SedDocument(
+            models=[introspection['sim_model']],
+            simulations=[introspection['simulation']])
+        return sed_doc
+
 
     @classmethod
     def add_changed_sed_to_uploaded_archive(cls, uploaded_archive: CombineArchive) -> None:
@@ -183,6 +204,7 @@ class ArchiveEditorApi:
                             kisao_id=kisao_id)
 
                         serialized_editable_params = cls.get_serialized_params(attributes)
+                        serialized_editable_params['simulation'] = sim
                         serialized_editable_params['sim_type'] = sim_type
                         serialized_editable_params['sim_model'] = sim_model
                         serialized_editable_params['model_lang'] = model_lang
@@ -222,9 +244,18 @@ class ArchiveEditorApi:
         uploaded_archive: CombineArchive = cls.read_omex(omex_fp, temp_extraction_dir)
         serialized_editable_params = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
 
-        adjusted_sed: SedDocument = cls.generate_sed_doc_from_changed_model(uploaded_archive, temp_extraction_dir, kisao_id)
-        return adjusted_sed
+        adjusted_sed_doc: SedDocument = cls.generate_sed_doc_from_changed_model(uploaded_archive, temp_extraction_dir, kisao_id)
+        print(adjusted_sed_doc)
 
 
 def test_editor():
-    ArchiveEditorApi.run()
+    file_src_root = './editor-api/archive_editor/file_assets'
+    fp = os.path.join(
+        file_src_root,
+        'Ciliberto-J-Cell-Biol-2003-morphogenesis-checkpoint-continuous.omex')
+    ArchiveEditorApi.run(omex_fp=fp)
+
+
+test_editor()
+
+
