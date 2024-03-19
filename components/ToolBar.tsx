@@ -17,6 +17,20 @@ type Props = {
 
 
 export function ToolBar({ editor }: Props) { 
+    if (!editor) {
+        return null
+    }
 
-    return null
-};
+    return (
+        <div className={"border border-input bg-transparent rounded"}>
+            <Toggle
+                size="sm"
+                pressed={editor.isActive("heading")}
+                onPressedChange={() =>
+                    editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            >
+                <Heading2 className={"h-4 w-4"} />
+            </Toggle>
+        </div>
+    )
+}

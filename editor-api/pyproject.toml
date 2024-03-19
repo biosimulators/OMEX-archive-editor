@@ -4,7 +4,7 @@ version = "0.0.1"
 description = ""
 authors = ["Alex Patrie <alexanderpatrie@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "submit" }]
+packages = [{ include = "archive_editor" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -21,6 +21,7 @@ uvicorn = {extras = ["standard"], version = "^0.27.0"}
 openai = "*"
 python-dotenv = ">=0.21.0"
 biosimulators-utils = "*"
+flask = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
