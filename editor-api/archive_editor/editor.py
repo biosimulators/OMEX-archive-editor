@@ -184,15 +184,21 @@ class ArchiveEditorApi:
 
 
     @classmethod
-    def add_changed_sed_to_uploaded_archive(cls, uploaded_archive: CombineArchive) -> None:
-        # remove previous sedml
-        sed_fp = cls.get_sedml_filepath_from_archive(uploaded_archive, overwrite=True)
+    def add_changed_sed_to_uploaded_archive(
+            cls,
+            uploaded_archive: CombineArchive,
+            changed_sed_doc: ChangedSedDocument
+    ) -> CombineArchive:
+        # remove previous sedml and get the original filepath name
+        sed_fp = cls.get_sedml_filepath_from_archive(uploaded_archive, overwrite=True)  # .replace('.sedml', '_edited.sedml')
 
+        # make a new content instance for the uploaded archive and apply it
         sed_content = CombineArchiveContent(
             location=sed_fp,
             format=CombineArchiveContentFormat.SED_ML.value,
             master=True)
-        return uploaded_archive.contents.append(sed_content)
+        uploaded_archive.contents.append(sed_content)
+        return uploaded_archive
 
 
     # TODO: add this to the yaml spec
@@ -262,9 +268,6 @@ class ArchiveEditorApi:
         # extract uploaded file and derive CombineArchive object
         temp_extraction_dir = tempfile.mkdtemp()
         uploaded_archive: CombineArchive = cls.read_omex(omex_fp, temp_extraction_dir)
-        for content in uploaded_archive.contents:
-            print('FIRST GO:')
-            print(content.location)
 
         # get editable params as dict
         serialized_editable_params = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
@@ -277,9 +280,12 @@ class ArchiveEditorApi:
             fp=adjusted_sed_fp)
 
         # add the changed sed to the archive contents
-        cls.add_changed_sed_to_uploaded_archive(uploaded_archive=uploaded_archive)
-        for content in uploaded_archive.contents:
-            print(content.location)
+        edited_archive: CombineArchive = cls.add_changed_sed_to_uploaded_archive(
+            uploaded_archive=uploaded_archive,
+            changed_sed_doc=adjusted_sed_doc)
+
+        # TODO: change this
+        assert edited_archive == uploaded_archive, 'Could not update the uploaded archive state.'
 
 
 def test_editor():
