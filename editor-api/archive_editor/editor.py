@@ -246,7 +246,8 @@ class ArchiveEditorApi:
             omex_fp: str = None,
             working_dir: str = None,
             colab: bool = False,
-            kisao_id: str = None
+            kisao_id: str = None,
+            download_result: bool = True
     ):
         """Introspect an archive for all editable changes to the simulation and
             return a JSON representation of the editable parameters.
@@ -259,9 +260,8 @@ class ArchiveEditorApi:
                     to `False`.
                 kisao_id:`str`: KiSAO id of the algorithm for simulating the model.
                     Defaults to `None`.
-
-            Returns:
-                Dict: JSON representation of all editable parameters.
+                download_result:`bool`: whether to download the edited archive after
+                    changing it. Defaults to `True`.
         """
         # handle upload TODO: expand this for entrypoints
         if working_dir and omex_fp is None:
@@ -292,7 +292,9 @@ class ArchiveEditorApi:
         # TODO: change this
         cls.assert_same_archive(uploaded_archive, edited_archive)
 
+        # write the edited archive
 
+        # download edited archive
 
 
 def test_editor():
