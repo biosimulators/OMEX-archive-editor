@@ -266,7 +266,7 @@ class ArchiveEditorApi:
                 Dict: JSON representation of all editable parameters.
         """
         # handle upload TODO: expand this for entrypoints
-        if working_dir and not omex_fp:
+        if working_dir and omex_fp is None:
             if colab:
                 from google.colab import files
                 cls.upload_archive()
