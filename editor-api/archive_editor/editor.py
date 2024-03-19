@@ -186,10 +186,11 @@ class ArchiveEditorApi:
     def add_changed_sed_to_uploaded_archive(
             cls,
             uploaded_archive: CombineArchive,
-            changed_sed_doc: ChangedSedDocument
+            changed_sed_doc: ChangedSedDocument,
+            sed_fp: str
     ) -> CombineArchive:
-        # remove previous sedml and get the original filepath name
-        sed_fp = cls.get_sedml_filepath_from_archive(uploaded_archive, overwrite=True)  # .replace('.sedml', '_edited.sedml')
+        # remove previous sedml and get the original filepath name (moved to run)
+        # sed_fp = cls.get_sedml_filepath_from_archive(uploaded_archive, overwrite=True)  # .replace('.sedml', '_edited.sedml')
 
         # make a new content instance for the uploaded archive and apply it
         sed_content = CombineArchiveContent(
@@ -241,6 +242,15 @@ class ArchiveEditorApi:
             return print('This change is valid')
 
     @classmethod
+    def write_edited_archive(
+            cls,
+            edited_archive: CombineArchive,
+            archive_working_dir: str,
+            save_fp: str
+    ) -> None:
+        return CombineArchiveWriter().run(archive=edited_archive, in_dir=archive_working_dir, out_file=save_fp)
+
+    @classmethod
     def run(
             cls,
             omex_fp: str = None,
@@ -284,16 +294,28 @@ class ArchiveEditorApi:
             doc=adjusted_sed_doc,
             fp=adjusted_sed_fp)
 
+        # rename adjusted sed doc to original name
+        sed_fp = cls.get_sedml_filepath_from_archive(uploaded_archive, overwrite=True)
+        os.rename(src=adjusted_sed_fp, dst=sed_fp)
+
         # add the changed sed to the archive contents
         edited_archive: CombineArchive = cls.add_changed_sed_to_uploaded_archive(
             uploaded_archive=uploaded_archive,
-            changed_sed_doc=adjusted_sed_doc)
+            changed_sed_doc=adjusted_sed_doc,
+            sed_fp=sed_fp)
 
         # TODO: change this
         cls.assert_same_archive(uploaded_archive, edited_archive)
 
         # write the edited archive
+        print(f'TEMP: {os.listdir(temp_extraction_dir)}')
+        for c in edited_archive.contents:
+            print(c.location)
 
+        '''cls.write_edited_archive(
+            edited_archive=edited_archive,
+            archive_working_dir=temp_extraction_dir,
+        )'''
         # download edited archive
 
 
