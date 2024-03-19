@@ -150,13 +150,17 @@ class ArchiveEditorApi:
             extraction_dir=extraction_dir,
             kisao_id=kisao_id)
 
-        # make model changes
+        # source model params
         sim_type = introspection['sim_type']
         sim_model = introspection['sim_model']
         model_lang = introspection['model_lang']
         model_source = introspection['model_source']
         changed_attributes = cls.edit_simulation_parameters(serialized_parameters=introspection, **changes)
-        new_model_changes = []
+
+        # remove old changes to existing model/introspection
+        introspection['sim_model'].changes.clear()
+
+        # add new changes
         for param in introspection['values']:
             param_values = param.pop('value')
             val = param_values.get('new_value') or param_values['default']
@@ -166,13 +170,7 @@ class ArchiveEditorApi:
                 target=param['target'],
                 target_namespaces=param['target_namespaces'],
                 new_value=str(val))
-            new_model_changes.append(attribute_change)
-
-        # apply changes
-        assert sim_model.changes != new_model_changes, 'Model changes are invalid.'
-        introspection['sim_model'].changes.clear()
-        print('removed changes!')
-        introspection['sim_model'].changes = new_model_changes
+            introspection['sim_model'].changes.append(attribute_change)
 
         sed_doc = ChangedSedDocument(
             models=[introspection['sim_model']],
