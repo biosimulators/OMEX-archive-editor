@@ -4,13 +4,13 @@ import tempfile
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Dict, Union
 from process_bigraph import pp
-from biosimulators_utils.combine.data_model import CombineArchive, CombineArchiveContent
+from biosimulators_utils.combine.data_model import CombineArchive, CombineArchiveContent, CombineArchiveContentFormat
 from biosimulators_utils.combine.io import CombineArchiveWriter, CombineArchiveReader
 from biosimulators_utils.sedml.io import SedmlSimulationReader, SedmlSimulationWriter
 from biosimulators_utils.sedml.utils import get_all_sed_objects  # change this
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
 from biosimulators_utils.sedml.data_model import *
-from archive_editor.data_model import EditableSimulationParameter, ParameterValue
+from archive_editor.data_model import EditableSimulationParameter, ParameterValue, ChangedSedDocument
 
 
 # exec
@@ -43,6 +43,16 @@ class ArchiveEditorApi:
     @classmethod
     def get_sedml(cls, fp: str) -> SedDocument:
         return SedmlSimulationReader().run(filename=fp)
+
+    @classmethod
+    def get_sedml_filepath_from_archive(cls, uploaded_archive: CombineArchive, overwrite: True) -> str:
+        sed_fp = []
+        for content in uploaded_archive.contents:
+            if 'sedml' in content.location:
+                sed_fp.append(content.location)
+                if overwrite:
+                    uploaded_archive.contents.remove(content)
+        return sed_fp.pop()
 
     @classmethod
     def get_editable_params(
@@ -120,7 +130,7 @@ class ArchiveEditorApi:
             extraction_dir: str,
             kisao_id: str = None,
             **changes
-    ) -> SedDocument:
+    ) -> ChangedSedDocument:
         """Introspect uploaded COMBINE/OMEX file for possible changes, apply user changes, and
             generate a new sed doc from the changes.
 
@@ -162,20 +172,28 @@ class ArchiveEditorApi:
         assert sim_model.changes != new_model_changes, 'Model changes are valid.'
         introspection['sim_model'].changes = new_model_changes
 
-        sed_doc = SedDocument(
+        sed_doc = ChangedSedDocument(
             models=[introspection['sim_model']],
-            simulations=[introspection['simulation']])
+            simulations=introspection['simulation'])
         return sed_doc
+
+    @classmethod
+    def write_changed_sed_doc(cls, doc: ChangedSedDocument, fp: str) -> None:
+        """Write a changed sed document to a specified filepath."""
+        return SedmlSimulationWriter().run(doc=doc, filename=fp)
 
 
     @classmethod
     def add_changed_sed_to_uploaded_archive(cls, uploaded_archive: CombineArchive) -> None:
         # remove previous sedml
-        print(len(uploaded_archive.contents))
-        for content in uploaded_archive.contents:
-            if 'sedml' in content.location:
-                uploaded_archive.contents.remove(content)
-        print(len(uploaded_archive.contents))
+        sed_fp = cls.get_sedml_filepath_from_archive(uploaded_archive, overwrite=True)
+
+        sed_content = CombineArchiveContent(
+            location=sed_fp,
+            format=CombineArchiveContentFormat.SED_ML.value,
+            master=True)
+        return uploaded_archive.contents.append(sed_content)
+
 
     # TODO: add this to the yaml spec
     @classmethod
@@ -234,18 +252,34 @@ class ArchiveEditorApi:
             Returns:
                 Dict: JSON representation of all editable parameters.
         """
+        # handle upload TODO: expand this for entrypoints
         if working_dir and not omex_fp:
             if colab:
                 from google.colab import files
                 cls.upload_archive()
             omex_fp: str = cls.get_uploaded_omex_fp(working_dir)
 
+        # extract uploaded file and derive CombineArchive object
         temp_extraction_dir = tempfile.mkdtemp()
         uploaded_archive: CombineArchive = cls.read_omex(omex_fp, temp_extraction_dir)
+        for content in uploaded_archive.contents:
+            print('FIRST GO:')
+            print(content.location)
+
+        # get editable params as dict
         serialized_editable_params = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
 
-        adjusted_sed_doc: SedDocument = cls.generate_sed_doc_from_changed_model(uploaded_archive, temp_extraction_dir, kisao_id)
-        print(adjusted_sed_doc)
+        # generate new sed doc and write it to temp dir
+        adjusted_sed_doc: ChangedSedDocument = cls.generate_sed_doc_from_changed_model(uploaded_archive, temp_extraction_dir, kisao_id)
+        adjusted_sed_fp = os.path.join(temp_extraction_dir, 'adjusted_simulation.sedml')
+        cls.write_changed_sed_doc(
+            doc=adjusted_sed_doc,
+            fp=adjusted_sed_fp)
+
+        # add the changed sed to the archive contents
+        cls.add_changed_sed_to_uploaded_archive(uploaded_archive=uploaded_archive)
+        for content in uploaded_archive.contents:
+            print(content.location)
 
 
 def test_editor():
