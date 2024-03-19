@@ -1,6 +1,7 @@
 # API source
 import os
 import tempfile
+import urllib.request
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Dict, Union
 from process_bigraph import pp
@@ -251,10 +252,25 @@ class ArchiveEditorApi:
         return CombineArchiveWriter().run(archive=edited_archive, in_dir=archive_working_dir, out_file=save_fp)
 
     @classmethod
+    def download_archive_clientside(cls, url: str, destination: str) -> Tuple:
+        """Use this to download the uploaded archive in memory to a client destination.
+
+            Args:
+                url:`str`: non-local location of the uploaded archive.
+                destination:`str`: save destination on local/client for omex.
+
+            Returns:
+                `Tuple[str, HTTPMessage]` see `urllib`
+            TODO: employ S3 here?
+        """
+        return urllib.request.urlretrieve(url, destination)
+
+    @classmethod
     def run(
             cls,
             omex_fp: str = None,
             working_dir: str = None,
+            save_fp: str = None,
             colab: bool = False,
             kisao_id: str = None,
             download_result: bool = True
@@ -266,6 +282,8 @@ class ArchiveEditorApi:
                 omex_fp:`str`: direct path of the archive to upload.
                 working_dir:`str`: path of location in which the COMBINE archive
                     is stored.
+                save_fp:`str`: save filepath for the edited archive. If no value is passed,
+                    use temp dir. Defaults to `None`.
                 colab:`bool`: If using colab, prompts user for archive input. Defaults
                     to `False`.
                 kisao_id:`str`: KiSAO id of the algorithm for simulating the model.
@@ -307,17 +325,18 @@ class ArchiveEditorApi:
         # TODO: change this
         cls.assert_same_archive(uploaded_archive, edited_archive)
 
-        # write the edited archive
-        print(f'TEMP: {os.listdir(temp_extraction_dir)}')
-        for c in edited_archive.contents:
-            print(c.location)
+        # save to temp file if dest is not specified
+        if save_fp is None:
+            save_fp = tempfile.mktemp()
 
-        '''cls.write_edited_archive(
+        # write the edited archive
+        cls.write_edited_archive(
             edited_archive=edited_archive,
             archive_working_dir=temp_extraction_dir,
-        )'''
-        # download edited archive
+            save_fp=save_fp)
 
+        # download edited archive
+        print(os.path.exists(save_fp))
 
 def test_editor():
     file_src_root = './editor-api/archive_editor/file_assets'
