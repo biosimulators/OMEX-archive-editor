@@ -169,7 +169,9 @@ class ArchiveEditorApi:
             new_model_changes.append(attribute_change)
 
         # apply changes
-        assert sim_model.changes != new_model_changes, 'Model changes are valid.'
+        assert sim_model.changes != new_model_changes, 'Model changes are invalid.'
+        introspection['sim_model'].changes.clear()
+        print('removed changes!')
         introspection['sim_model'].changes = new_model_changes
 
         sed_doc = ChangedSedDocument(
@@ -293,6 +295,8 @@ class ArchiveEditorApi:
 
         # TODO: change this
         cls.assert_same_archive(uploaded_archive, edited_archive)
+
+
 
 
 def test_editor():
