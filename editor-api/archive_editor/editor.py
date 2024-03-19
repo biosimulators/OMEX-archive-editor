@@ -114,6 +114,38 @@ class ArchiveEditorApi:
         return serialized_parameters
 
     @classmethod
+    def prompt_edit_simulation_parameters(
+            cls,
+            serialized_parameters: Dict,
+            prompt: bool = True,
+            **changes) -> Dict:
+        """Provide new values to the serialized_parameters dict and return the same
+            dict, but edited.
+
+            Args:
+                serialized_parameters:`Dict`: params datastructure that will be edited.
+                prompt:`bool`: whether to prompt the user through the changes. Defaults to
+                    `True`.
+
+            Returns:
+                the edited parameters
+        """
+        for i, param in enumerate(serialized_parameters['values']):
+            param_name = param['name']
+            if prompt:
+                param_val = input(f'Please enter the new value for {param_name}. Enter to skip: ')
+            else:
+                # if no kwargs passed
+                if not changes:
+                    param_val = serialized_parameters['values'][i]['value']['default']
+                #otherwise use kwargs
+                else:
+                    param_val = changes[param_name]
+            # set value
+            serialized_parameters['values'][i]['value']['new_value'] = param_val
+        return serialized_parameters
+
+    @classmethod
     def generate_model(
             cls,
             model_id: str,
@@ -156,15 +188,17 @@ class ArchiveEditorApi:
         sim_model = introspection['sim_model']
         model_lang = introspection['model_lang']
         model_source = introspection['model_source']
-        changed_attributes = cls.edit_simulation_parameters(serialized_parameters=introspection, **changes)
-
+        changed_attributes = cls.edit_simulation_parameters(
+            serialized_parameters=introspection,
+            **changes)
+        # changed_attributes = cls.prompt_edit_simulation_parameters(introspection)
         # remove old changes to existing model/introspection
         introspection['sim_model'].changes.clear()
 
         # add new changes
         for param in introspection['values']:
             param_values = param.pop('value')
-            val = param_values.get('new_value') or param_values['default']
+            val = param_values['new_value']  # or param_values['default']
             attribute_change = ModelAttributeChange(
                 id=param['id'],
                 name=param['name'],
@@ -176,6 +210,7 @@ class ArchiveEditorApi:
         sed_doc = ChangedSedDocument(
             models=[introspection['sim_model']],
             simulations=introspection['simulation'])
+        print(introspection)
         return sed_doc
 
     @classmethod
@@ -267,13 +302,14 @@ class ArchiveEditorApi:
 
     @classmethod
     def run(
-            cls,
-            omex_fp: str = None,
-            working_dir: str = None,
-            save_fp: str = None,
-            colab: bool = False,
-            kisao_id: str = None,
-            download_result: bool = True
+        cls,
+        omex_fp: str = None,
+        working_dir: str = None,
+        save_fp: str = None,
+        colab: bool = False,
+        kisao_id: str = None,
+        download_result: bool = True,
+        **changes_to_apply
     ):
         """Introspect an archive for all editable changes to the simulation and
             return a JSON representation of the editable parameters.
@@ -290,6 +326,8 @@ class ArchiveEditorApi:
                     Defaults to `None`.
                 download_result:`bool`: whether to download the edited archive after
                     changing it. Defaults to `True`.
+                **changes_to_apply:`kwargs`: changes to apply that are referenced in key
+                    by the name to of that val you want to change. # TODO: more robust
         """
         # handle upload TODO: expand this for entrypoints
         if working_dir and omex_fp is None:
@@ -306,7 +344,11 @@ class ArchiveEditorApi:
         serialized_editable_params = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
 
         # generate new sed doc and write it to temp dir
-        adjusted_sed_doc: ChangedSedDocument = cls.generate_sed_doc_from_changed_model(uploaded_archive, temp_extraction_dir, kisao_id)
+        adjusted_sed_doc: ChangedSedDocument = cls.generate_sed_doc_from_changed_model(
+            uploaded_archive=uploaded_archive,
+            extraction_dir=temp_extraction_dir,
+            kisao_id=kisao_id,
+            **changes_to_apply)
         adjusted_sed_fp = os.path.join(temp_extraction_dir, 'adjusted_simulation.sedml')
         cls.write_changed_sed_doc(
             doc=adjusted_sed_doc,
@@ -337,6 +379,7 @@ class ArchiveEditorApi:
 
         # download edited archive
         print(os.path.exists(save_fp))
+
 
 def test_editor():
     file_src_root = './editor-api/archive_editor/file_assets'
