@@ -182,7 +182,6 @@ class ArchiveEditorApi:
         """Write a changed sed document to a specified filepath."""
         return SedmlSimulationWriter().run(doc=doc, filename=fp)
 
-
     @classmethod
     def add_changed_sed_to_uploaded_archive(
             cls,
@@ -200,14 +199,13 @@ class ArchiveEditorApi:
         uploaded_archive.contents.append(sed_content)
         return uploaded_archive
 
-
-    # TODO: add this to the yaml spec
     @classmethod
     def introspect_archive(
             cls,
             uploaded_archive: CombineArchive,
             extraction_dir: str,
             kisao_id: str = None) -> Dict:
+        # TODO: add this to the yaml spec
         for content in uploaded_archive.contents:
             if 'sedml' in content.location:
                 sed_fp = content.location.replace('./', '')
