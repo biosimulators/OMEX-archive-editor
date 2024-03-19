@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+from typing import Union, Dict
 
 
 @dataclass

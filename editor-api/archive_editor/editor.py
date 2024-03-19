@@ -10,7 +10,7 @@ from biosimulators_utils.sedml.io import SedmlSimulationReader, SedmlSimulationW
 from biosimulators_utils.sedml.utils import get_all_sed_objects  # change this
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
 from biosimulators_utils.sedml.data_model import *
-from archive_editor.data_model import EditableSimulationParameter
+from archive_editor.data_model import EditableSimulationParameter, ParameterValue
 
 
 # exec
@@ -190,11 +190,18 @@ class ArchiveEditorApi:
                         return serialized_editable_params
 
     @classmethod
-    def run(cls, working_dir: str, colab: bool = False, kisao_id: str = None):
+    def run(
+            cls,
+            omex_fp: str = None,
+            working_dir: str = None,
+            colab: bool = False,
+            kisao_id: str = None
+    ):
         """Introspect an archive for all editable changes to the simulation and
             return a JSON representation of the editable parameters.
 
             Args:
+                omex_fp:`str`: direct path of the archive to upload.
                 working_dir:`str`: path of location in which the COMBINE archive
                     is stored.
                 colab:`bool`: If using colab, prompts user for archive input. Defaults
@@ -205,13 +212,19 @@ class ArchiveEditorApi:
             Returns:
                 Dict: JSON representation of all editable parameters.
         """
-        if colab:
-            from google.colab import files
-            cls.upload_archive()
+        if working_dir and not omex_fp:
+            if colab:
+                from google.colab import files
+                cls.upload_archive()
+            omex_fp: str = cls.get_uploaded_omex_fp(working_dir)
 
-        omex_fp: str = cls.get_uploaded_omex_fp(working_dir)
         temp_extraction_dir = tempfile.mkdtemp()
         uploaded_archive: CombineArchive = cls.read_omex(omex_fp, temp_extraction_dir)
         serialized_editable_params = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
 
         adjusted_sed: SedDocument = cls.generate_sed_doc_from_changed_model(uploaded_archive, temp_extraction_dir, kisao_id)
+        return adjusted_sed
+
+
+def test_editor():
+    ArchiveEditorApi.run()
