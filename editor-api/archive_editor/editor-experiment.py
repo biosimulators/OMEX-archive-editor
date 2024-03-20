@@ -291,6 +291,8 @@ class ArchiveEditorApi:
                             model_source=model_fp,
                             editable_parameters=editable_params)
 
+                        pp(simulation_params)
+
                         serialized_editable_params = cls._get_serialized_params(editable_params)
                         serialized_editable_params['simulation'] = sim
                         serialized_editable_params['sim_model'] = sim_model
