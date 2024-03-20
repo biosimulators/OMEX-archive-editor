@@ -1,0 +1,5 @@
+1. Upload archive -> None
+2. extract and read archive(tempdir, workingDir/fp) -> CombineArchive
+3. introspect archive(CombineArchive, tempdir, kisao) -> serialized params
+4. edit_simulation params(serialized params) -> serialized params
+4. generate sed doc from changes(calls introspect()) -> ChangedSedDocument

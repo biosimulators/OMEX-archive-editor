@@ -205,7 +205,6 @@ class ArchiveEditorApi:
             kisao_id=kisao_id)
 
         # source model params
-        sim_type = introspection['sim_type']
         sim_model = introspection['sim_model']
         model_lang = introspection['model_lang']
         model_source = introspection['model_source']
@@ -289,10 +288,10 @@ class ArchiveEditorApi:
 
                         serialized_editable_params = cls._get_serialized_params(editable_params)
                         serialized_editable_params['simulation'] = sim
-                        serialized_editable_params['sim_type'] = sim_type
                         serialized_editable_params['sim_model'] = sim_model
                         serialized_editable_params['model_lang'] = model_lang
                         serialized_editable_params['model_source'] = model_fp
+                        pp(serialized_editable_params)
                         return serialized_editable_params
 
     @classmethod
