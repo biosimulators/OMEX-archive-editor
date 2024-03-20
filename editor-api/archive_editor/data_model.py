@@ -1,6 +1,33 @@
 from dataclasses import dataclass, asdict, field
+from pydantic import BaseModel as Base, create_model, ConfigDict
 from typing import Union, Dict, List, Tuple
 from biosimulators_utils.sedml.data_model import SedDocument, Model, Simulation
+
+
+class BaseModel(Base):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+def create_dynamic_class(model_name, model_base, **params) -> BaseModel:
+    dynamic_config_types = {}
+    for param_name, param_val in params.items():
+        dynamic_config_types[param_name] = (type(param_val), ...)
+
+    Dynamic = create_model(
+        __model_name=model_name,
+        __base__=model_base,
+        **dynamic_config_types)
+
+    # return edited_params
+    return Dynamic(**params)
+
+
+class EditedParametersBase(BaseModel):
+    pass
+
+
+class SerializedParametersBase(BaseModel):
+    pass
 
 
 @dataclass
