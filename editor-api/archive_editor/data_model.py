@@ -89,6 +89,9 @@ class SimulationParameters:
     editable_parameters: List[EditableSimulationParameter]
     model_lang_urn: str = 'urn:sedml:language:sbml'
 
+    def to_dict(self):
+        return asdict(self)
+
 
 class ChangedSedDocument(SedDocument):
     def __init__(self,

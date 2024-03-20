@@ -84,15 +84,14 @@ class ArchiveEditorApi:
             attributes: List[ModelAttributeChange]) -> List[EditableSimulationParameter]:
         params = []
         for attribute in attributes:
-            # new_value is default and target is target
             param_value = ParameterValue(default=attribute.new_value)
             param_target = ParameterTarget(value=attribute.target)
-            pp(_EditableSimulationParameter(
-                target=param_target,
-                value=param_value,
-                target_namespaces=attribute.target_namespaces,
-                name=attribute.name,
-                id=attribute.name))
+            # pp(_EditableSimulationParameter(
+            #     target=param_target,
+            #     value=param_value,
+            #     target_namespaces=attribute.target_namespaces,
+            #     name=attribute.name,
+            #     id=attribute.name))
             editable_param = EditableSimulationParameter(
                 target=attribute.target,
                 value=param_value,
@@ -112,35 +111,45 @@ class ArchiveEditorApi:
         return {'values': serialized}
 
     @classmethod
-    def get_serialized_params(cls, attributes: List[ModelAttributeChange]) -> Dict[str, List[Dict[str, Union[str, Dict[str, Union[int, float]]]]]]:
-        editable_params = cls.parse_editable_params(attributes)
-        serialized = []
-        for param in editable_params:
-            serialized.append(param.to_dict())
-        return {'values': serialized}
-
-    @classmethod
-    def edit_simulation_parameters(cls, serialized_parameters: Dict, **new_values) -> Dict:
+    def edit_simulation_parameters(cls, serialized_parameters: Dict, sim_params: SimulationParameters, **new_values) -> Dict:
         """Provide new values to the serialized_parameters dict and return the same
             dict, but edited.
 
             Args:
                 serialized_parameters:`Dict`: params datastructure that will be edited.
-                **new_values:`kwargs`: new key value assignments to the values.
+                **new_values:`kwargs`: new key value assignments to the values in dict form
+                    where the kwarg name is the parameter id [@id=<THIS>], and the value
+                    is a dict of {paramValType(@value, @initialConcentration): value}
+                    For example, `flag={'value': '23.23'}`
 
             Returns:
                 the edited parameters
         """
-        for param_name, param_val in new_values.items():
-            serialized_parameters['values'][param_name]['value']['new_value'] = param_val
-        return serialized_parameters
+        for editable in sim_params.editable_parameters:
+            for param_name, param_value_dict in new_values.items():
+                if editable.name in param_name:
+                    for val_type, val in param_value_dict.items():
+
+                        if val_type in editable.target:
+                            editable.value.new_value = [v for k, v in param_value_dict.items()].pop()
+                            print('TRUE')
+
+                        serialized_parameters['values'][param_name]['value']['new_value'] = val
+
+        return serialized_parameters, sim_params
+
+    @classmethod
+    def _edit_simulation_parameters(cls, sim_params: SimulationParameters, **new_vals):
+        for param_name, param_val in new_vals.items():
+            pass
+
 
     @classmethod
     def prompt_edit_simulation_parameters(
             cls,
             serialized_parameters: Dict,
             prompt: bool = True,
-            **changes) -> Dict:
+            changes: Dict = None) -> Dict:
         """Provide new values to the serialized_parameters dict and return the same
             dict, but edited.
 
@@ -152,20 +161,29 @@ class ArchiveEditorApi:
             Returns:
                 the edited parameters
         """
+        if changes is None:
+            changes = {}
+
         for i, param in enumerate(serialized_parameters['values']):
-            param_name = param['name']
-            if prompt:
-                param_val = input(f'Please enter the new value for {param_name}. Enter to skip: ')
-            else:
-                # if no kwargs passed
-                if not changes:
-                    param_val = serialized_parameters['values'][i]['value']['default']
-                #otherwise use kwargs
+            param_name = param['name']  # for example 'Initial concentration of species "CDC28_Clb2_Sic1_Complex"'
+
+            def get_changes():
+                if prompt:
+                    return input(f'Please enter the new value for {param_name}. Enter to skip: ')
                 else:
-                    param_val = changes[param_name]
+                    for name, value in changes.items():
+                        # if no kwargs passed
+                        if name in param_name:
+                            return changes[param_name]
+                        #otherwise use kwargs
+                        else:
+                            return serialized_parameters['values'][i]['value']['default']
+
             # set value
+            param_val = get_changes()
             serialized_parameters['values'][i]['value']['new_value'] = param_val
         return serialized_parameters
+
 
     @classmethod
     def generate_model(
@@ -200,7 +218,7 @@ class ArchiveEditorApi:
                 `SedDocument` instance configured with user changes.
         """
         # gather introspection
-        introspection = cls.introspect_archive(
+        introspection, sim_params = cls.introspect_archive(
             uploaded_archive=uploaded_archive,
             extraction_dir=extraction_dir,
             kisao_id=kisao_id)
@@ -209,10 +227,12 @@ class ArchiveEditorApi:
         sim_model = introspection['sim_model']
         model_lang = introspection['model_lang']
         model_source = introspection['model_source']
-        changed_attributes = cls.edit_simulation_parameters(
-            serialized_parameters=introspection,
-            **changes)
-        # changed_attributes = cls.prompt_edit_simulation_parameters(introspection)
+        # changed_attributes, sim = cls.edit_simulation_parameters(
+        #     serialized_parameters=introspection,
+        #     sim_params=sim_params,
+        #     **changes)
+
+        changed_attributes = cls.prompt_edit_simulation_parameters(introspection, prompt=True, **changes)
         # remove old changes to existing model/introspection
         introspection['sim_model'].changes.clear()
 
@@ -291,14 +311,12 @@ class ArchiveEditorApi:
                             model_source=model_fp,
                             editable_parameters=editable_params)
 
-                        pp(simulation_params)
-
                         serialized_editable_params = cls._get_serialized_params(editable_params)
                         serialized_editable_params['simulation'] = sim
                         serialized_editable_params['sim_model'] = sim_model
                         serialized_editable_params['model_lang'] = model_lang
                         serialized_editable_params['model_source'] = model_fp
-                        return serialized_editable_params
+                        return serialized_editable_params, simulation_params
 
     @classmethod
     def assert_same_archive(cls, original_archive: CombineArchive, new_archive: CombineArchive):
@@ -371,7 +389,7 @@ class ArchiveEditorApi:
         uploaded_archive: CombineArchive = cls.read_omex(omex_fp, temp_extraction_dir)
 
         # get editable params as dict
-        serialized_editable_params = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
+        serialized_editable_params, v = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
 
         pp(serialized_editable_params['values'][0])
 
@@ -418,7 +436,7 @@ def test_editor():
     fp = os.path.join(
         file_src_root,
         'Ciliberto-J-Cell-Biol-2003-morphogenesis-checkpoint-continuous.omex')
-    ArchiveEditorApi.run(omex_fp=fp)
+    ArchiveEditorApi.run(omex_fp=fp, flag={'value': '2.2323'})
 
 
 test_editor()
