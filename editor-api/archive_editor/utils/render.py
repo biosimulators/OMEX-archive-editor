@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template_string, redirect, url_for
-from archive_editor.editor import ArchiveEditorApi
+from archive_editor.api import ArchiveEditorApi
 
 
 app = Flask(__name__)

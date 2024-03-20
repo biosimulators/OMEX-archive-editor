@@ -8,7 +8,7 @@ import os
 import json
 from tempfile import TemporaryDirectory, mkdtemp
 import shutil  # For copying files
-from archive_editor.editor import ArchiveEditorApi
+from archive_editor.api import ArchiveEditorApi
 from archive_editor.data_model import SimulationEditConfirmation
 
 
