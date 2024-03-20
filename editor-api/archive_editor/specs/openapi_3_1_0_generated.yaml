@@ -5,14 +5,39 @@ info:
 paths:
   /edit_simulation/:
     post:
-      summary: Edit Simulation
-      operationId: edit_simulation_edit_simulation__post
+      summary: Edit Archive Simulation
+      operationId: edit-simulation
       requestBody:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Body_edit_simulation_edit_simulation__post'
+              $ref: '#/components/schemas/Body_edit-simulation'
         required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationEditConfirmation'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /download/{file_identifier}:
+    get:
+      summary: Download Edited File
+      description: Serve the edited COMBINE archive for download.
+      operationId: download_edited_file_download__file_identifier__get
+      parameters:
+      - name: file_identifier
+        in: path
+        required: true
+        schema:
+          type: string
+          title: File Identifier
       responses:
         '200':
           description: Successful Response
@@ -27,19 +52,20 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
-    Body_edit_simulation_edit_simulation__post:
+    Body_edit-simulation:
       properties:
         archive:
           type: string
           format: binary
           title: Archive
-        edit_request:
-          allOf:
-          - $ref: '#/components/schemas/SimulationEditRequest'
+        edit_request_str:
+          type: string
+          title: Edit Request Str
       type: object
       required:
       - archive
-      title: Body_edit_simulation_edit_simulation__post
+      - edit_request_str
+      title: Body_edit-simulation
     HTTPValidationError:
       properties:
         detail:
@@ -49,23 +75,19 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
-    SimulationEditRequest:
+    SimulationEditConfirmation:
       properties:
-        kisao_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Kisao Id
-          description: KiSAO id of the algorithm for simulating the model.
-        changes_to_apply:
-          type: object
-          title: Changes To Apply
-          description: Changes to apply, referenced by the name of the value you want
-            to change.
+        message:
+          type: string
+          title: Message
+          default: Simulation edited successfully.
+        download_link:
+          type: string
+          title: Download Link
       type: object
       required:
-      - changes_to_apply
-      title: SimulationEditRequest
+      - download_link
+      title: SimulationEditConfirmation
     ValidationError:
       properties:
         loc:

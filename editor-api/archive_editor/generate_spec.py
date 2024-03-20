@@ -26,8 +26,14 @@ def main():
     if not os.path.exists(specs_dir):
         os.mkdir(specs_dir)
 
-    with open(f"{specs_dir}/openapi_3_1_0_generated.yaml", "w") as f:
+    yaml_fp = f"{specs_dir}/openapi_3_1_0_generated.yaml"
+    if os.path.exists(yaml_fp):
+        os.remove(yaml_fp)
+        print('Old spec removed!')
+
+    with open(yaml_fp, "w") as f:
         f.write(openapi_spec_yaml)
+        print('New spec written!')
 
 
 if __name__ == "__main__":

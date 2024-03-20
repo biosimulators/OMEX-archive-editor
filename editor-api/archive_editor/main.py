@@ -14,7 +14,7 @@ from archive_editor.data_model import SimulationEditConfirmation
 
 app = FastAPI()
 
-# Example global storage for demonstration; consider a more secure approach for production
+# TODO: Change this to Settings
 edited_files_storage = mkdtemp()
 
 
