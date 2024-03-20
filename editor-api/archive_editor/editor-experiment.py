@@ -16,6 +16,7 @@ from archive_editor.data_model import (
     ParameterValue,
     ChangedSedDocument,
     ParameterTarget,
+    SimulationParameters,
     _EditableSimulationParameter
 )
 
@@ -283,15 +284,18 @@ class ArchiveEditorApi:
 
                         # get the objects
                         editable_params = cls.parse_editable_params(attributes)
-                        # for param in editable_params:
-                        #     pp(param)
+                        simulation_params = SimulationParameters(
+                            simulation=sim,
+                            sim_model=sim_model,
+                            model_lang_urn=model_lang,
+                            model_source=model_fp,
+                            editable_parameters=editable_params)
 
                         serialized_editable_params = cls._get_serialized_params(editable_params)
                         serialized_editable_params['simulation'] = sim
                         serialized_editable_params['sim_model'] = sim_model
                         serialized_editable_params['model_lang'] = model_lang
                         serialized_editable_params['model_source'] = model_fp
-                        pp(serialized_editable_params)
                         return serialized_editable_params
 
     @classmethod
