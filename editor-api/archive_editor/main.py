@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import uvicorn
 from pydantic import BaseModel, Field
+import os
 import json
 from tempfile import TemporaryDirectory
 import shutil  # For copying files
