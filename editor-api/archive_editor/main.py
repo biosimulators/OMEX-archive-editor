@@ -6,24 +6,30 @@ import uvicorn
 from pydantic import BaseModel, Field
 import os
 import json
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkdtemp
 import shutil  # For copying files
+from archive_editor.editor import ArchiveEditorApi
+from archive_editor.data_model import SimulationEditConfirmation
+
 
 app = FastAPI()
 
 # Example global storage for demonstration; consider a more secure approach for production
-edited_files_storage = "/path/to/edited/files/storage"
+edited_files_storage = mkdtemp()
 
 
 class SimulationEditRequest(BaseModel):
     changes_to_apply: dict = Field(..., description="Changes to apply, referenced by the name of the value you want to change.")
 
 
-@app.post("/edit_simulation/")
+@app.post(
+    "/edit_simulation/",
+    response_model=SimulationEditConfirmation,
+    name="Edit Archive Simulation",
+    operation_id="edit-simulation")
 async def edit_simulation(
         archive: UploadFile = File(...),
-        edit_request_str: str = Form(...)
-    ):
+        edit_request_str: str = Form(...)) -> SimulationEditConfirmation:
     file_identifier = "unique_file_identifier"  # Generate or determine a unique identifier for each file
     try:
         edit_request = json.loads(edit_request_str)
@@ -40,7 +46,7 @@ async def edit_simulation(
             edited_file_path = os.path.join(edited_files_storage, f"{file_identifier}.omex")
             shutil.move(file_path, edited_file_path)
 
-        return {"message": "Simulation edited successfully.", "download_link": f"/download/{file_identifier}"}
+        return SimulationEditConfirmation(download_link=f"/download/{edited_file_path}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

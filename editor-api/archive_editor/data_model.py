@@ -30,6 +30,11 @@ class SerializedParametersBase(BaseModel):
     pass
 
 
+class SimulationEditConfirmation(BaseModel):
+    message: str = "Simulation edited successfully."
+    download_link: str
+
+
 @dataclass
 class ParameterTarget:
     prefix: str = None  # ie: "/sbml:sbml/sbml:model/sbml:listOfSpecies/sbml:species

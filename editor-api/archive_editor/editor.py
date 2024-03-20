@@ -26,8 +26,6 @@ from archive_editor.data_model import (
 
 
 
-
-
 # exec
 class ArchiveEditorApi:
     @classmethod
