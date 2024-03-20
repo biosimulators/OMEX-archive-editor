@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: FastAPI
+  version: 0.1.0
+paths:
+  /edit_simulation/:
+    post:
+      summary: Edit Simulation
+      operationId: edit_simulation_edit_simulation__post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_edit_simulation_edit_simulation__post'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    Body_edit_simulation_edit_simulation__post:
+      properties:
+        archive:
+          type: string
+          format: binary
+          title: Archive
+        edit_request:
+          allOf:
+          - $ref: '#/components/schemas/SimulationEditRequest'
+      type: object
+      required:
+      - archive
+      title: Body_edit_simulation_edit_simulation__post
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    SimulationEditRequest:
+      properties:
+        kisao_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Kisao Id
+          description: KiSAO id of the algorithm for simulating the model.
+        changes_to_apply:
+          type: object
+          title: Changes To Apply
+          description: Changes to apply, referenced by the name of the value you want
+            to change.
+      type: object
+      required:
+      - changes_to_apply
+      title: SimulationEditRequest
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

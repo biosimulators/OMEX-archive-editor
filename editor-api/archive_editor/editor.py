@@ -401,6 +401,6 @@ def test_editor():
     ArchiveEditorApi.run(omex_fp=fp, flag={'value': '2.2323'})
 
 
-test_editor()
+# test_editor()
 
 
