@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict, field
 from pydantic import BaseModel as Base, create_model, ConfigDict
 from typing import Union, Dict, List, Tuple
+from biosimulators_utils.combine.data_model import CombineArchive
 from biosimulators_utils.sedml.data_model import SedDocument, Model, Simulation
 
 
@@ -130,3 +131,12 @@ class ChangedSedDocument(SedDocument):
                  models: List[Model],
                  simulations: List[Simulation]):
         super().__init__(models=models, simulations=simulations)
+
+    def serialize(self):
+        return self.__dict__
+
+
+class SimulationEditResult(BaseModel):
+    archive: CombineArchive
+    edited_sedml: ChangedSedDocument
+    original_sedml: SedDocument

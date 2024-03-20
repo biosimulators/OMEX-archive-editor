@@ -9,12 +9,12 @@ import json
 from tempfile import TemporaryDirectory, mkdtemp
 import shutil  # For copying files
 from archive_editor.api import ArchiveEditorApi
-from archive_editor.data_model import SimulationEditConfirmation
+from archive_editor.data_model import SimulationEditConfirmation, SimulationEditResult
 
 
 app = FastAPI(title="editor-api", version="1.0.0")
 
-# TODO: Change this to Settings
+# TODO: Change this to Settings/S3
 edited_files_storage = mkdtemp()
 
 
@@ -34,8 +34,8 @@ async def root():
     operation_id="edit-simulation")
 async def edit_simulation(
         archive: UploadFile = File(...),
-        edit_request_str: str = Form(...)) -> SimulationEditConfirmation:
-    file_identifier = "unique_file_identifier"  # Generate or determine a unique identifier for each file
+        edit_request_str: str = Form(...),
+        new_omex_filename: str = Form(...)) -> SimulationEditConfirmation:
     try:
         edit_request = json.loads(edit_request_str)
         edit_request_model = SimulationEditRequest(**edit_request)
@@ -45,10 +45,10 @@ async def edit_simulation(
             with open(file_path, 'wb') as file_object:
                 file_object.write(archive.file.read())
 
-            ArchiveEditorApi.run(omex_fp=file_path, **edit_request_model.dict())
+            result: SimulationEditResult = ArchiveEditorApi.run(omex_fp=file_path, **edit_request_model.dict())
 
             # Instead of deleting, move the edited file to the edited_files_storage
-            edited_file_path = os.path.join(edited_files_storage, f"{file_identifier}.omex")
+            edited_file_path = os.path.join(edited_files_storage, f"{new_omex_filename}.omex")
             shutil.move(file_path, edited_file_path)
 
         return SimulationEditConfirmation(download_link=f"/download/{edited_file_path}")

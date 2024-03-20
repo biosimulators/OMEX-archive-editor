@@ -21,7 +21,8 @@ from archive_editor.data_model import (
     EditedParametersBase,
     create_dynamic_class,
     SerializedParametersBase,
-    BaseModel
+    BaseModel,
+    SimulationEditResult
 )
 
 
@@ -244,7 +245,7 @@ class ArchiveEditorApi:
             cls,
             uploaded_archive: CombineArchive,
             extraction_dir: str,
-            kisao_id: str = None) -> Dict:
+            kisao_id: str = None) -> Tuple[Dict, SedDocument]:
         """Introspect archive simulation and return a dict of serialized, editable params.
 
             Returns:
@@ -277,7 +278,7 @@ class ArchiveEditorApi:
                         serialized_editable_params['sim_model'] = sim_model
                         serialized_editable_params['model_lang'] = model_lang
                         serialized_editable_params['model_source'] = model_fp
-                        return serialized_editable_params
+                        return serialized_editable_params, sed_doc
 
     @classmethod
     def assert_same_archive(cls, original_archive: CombineArchive, new_archive: CombineArchive):
@@ -350,12 +351,14 @@ class ArchiveEditorApi:
         uploaded_archive: CombineArchive = cls.read_omex(omex_fp, temp_extraction_dir)
 
         # get editable params
-        serialized_introspection: Dict = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
+        serialized_introspection, original_sed_doc = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
 
         # generate new sed doc
         adjusted_sed_doc: ChangedSedDocument = cls.generate_sed_doc_from_introspection(
             introspection=serialized_introspection,
             **changes_to_apply)
+
+        pp(adjusted_sed_doc.to_tuple())
 
         # write new doc to temp extraction dir
         adjusted_sed_fp = os.path.join(temp_extraction_dir, 'adjusted_simulation.sedml')
@@ -388,6 +391,11 @@ class ArchiveEditorApi:
 
         # download edited archive
         print(os.path.exists(save_fp))
+
+        return SimulationEditResult(
+            archive=edited_archive,
+            edited_sedml=adjusted_sed_doc,
+            original_sedml=original_sed_doc)
 
 
 def test_editor():
