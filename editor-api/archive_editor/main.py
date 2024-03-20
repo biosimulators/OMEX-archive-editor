@@ -13,8 +13,10 @@ app = FastAPI()
 # Example global storage for demonstration; consider a more secure approach for production
 edited_files_storage = "/path/to/edited/files/storage"
 
+
 class SimulationEditRequest(BaseModel):
     changes_to_apply: dict = Field(..., description="Changes to apply, referenced by the name of the value you want to change.")
+
 
 @app.post("/edit_simulation/")
 async def edit_simulation(
@@ -50,6 +52,7 @@ async def download_edited_file(file_identifier: str):
         return FileResponse(path=file_path, filename=f"{file_identifier}.omex", media_type='application/octet-stream')
     else:
         raise HTTPException(status_code=404, detail="File not found.")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
