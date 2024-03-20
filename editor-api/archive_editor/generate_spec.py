@@ -26,7 +26,7 @@ def main():
     if not os.path.exists(specs_dir):
         os.mkdir(specs_dir)
 
-    yaml_fp = f"{specs_dir}/openapi_3_1_0_generated.yaml"
+    yaml_fp = f"{specs_dir}/openapi_{app.openapi_version.replace('.', '_')}_generated_spec.yaml"
     if os.path.exists(yaml_fp):
         os.remove(yaml_fp)
         print('Old spec removed!')

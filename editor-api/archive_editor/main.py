@@ -12,7 +12,7 @@ from archive_editor.editor import ArchiveEditorApi
 from archive_editor.data_model import SimulationEditConfirmation
 
 
-app = FastAPI()
+app = FastAPI(title="editor-api", version="1.0.0")
 
 # TODO: Change this to Settings
 edited_files_storage = mkdtemp()
@@ -20,6 +20,11 @@ edited_files_storage = mkdtemp()
 
 class SimulationEditRequest(BaseModel):
     changes_to_apply: dict = Field(..., description="Changes to apply, referenced by the name of the value you want to change.")
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello world, this is editor-api!"}
 
 
 @app.post(
