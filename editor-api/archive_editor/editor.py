@@ -16,8 +16,16 @@ from archive_editor.data_model import (
     ParameterValue,
     ChangedSedDocument,
     ParameterTarget,
-    _EditableSimulationParameter
+    SimulationParameters,
+    _EditableSimulationParameter,
+    EditedParametersBase,
+    create_dynamic_class,
+    SerializedParametersBase,
+    BaseModel
 )
+
+
+
 
 
 # exec
@@ -83,15 +91,14 @@ class ArchiveEditorApi:
             attributes: List[ModelAttributeChange]) -> List[EditableSimulationParameter]:
         params = []
         for attribute in attributes:
-            # new_value is default and target is target
             param_value = ParameterValue(default=attribute.new_value)
             param_target = ParameterTarget(value=attribute.target)
-            pp(_EditableSimulationParameter(
-                target=param_target,
-                value=param_value,
-                target_namespaces=attribute.target_namespaces,
-                name=attribute.name,
-                id=attribute.name))
+            # pp(_EditableSimulationParameter(
+            #     target=param_target,
+            #     value=param_value,
+            #     target_namespaces=attribute.target_namespaces,
+            #     name=attribute.name,
+            #     id=attribute.name))
             editable_param = EditableSimulationParameter(
                 target=attribute.target,
                 value=param_value,
@@ -102,7 +109,7 @@ class ArchiveEditorApi:
         return params
 
     @classmethod
-    def _get_serialized_params(
+    def serialize_params(
             cls,
             editable_params: List[EditableSimulationParameter]) -> Dict[str, List[Dict[str, Union[str, Dict[str, Union[int, float]]]]]]:
         serialized = []
@@ -111,60 +118,48 @@ class ArchiveEditorApi:
         return {'values': serialized}
 
     @classmethod
-    def get_serialized_params(cls, attributes: List[ModelAttributeChange]) -> Dict[str, List[Dict[str, Union[str, Dict[str, Union[int, float]]]]]]:
-        editable_params = cls.parse_editable_params(attributes)
-        serialized = []
-        for param in editable_params:
-            serialized.append(param.to_dict())
-        return {'values': serialized}
-
-    @classmethod
-    def edit_simulation_parameters(cls, serialized_parameters: Dict, **new_values) -> Dict:
-        """Provide new values to the serialized_parameters dict and return the same
-            dict, but edited.
-
-            Args:
-                serialized_parameters:`Dict`: params datastructure that will be edited.
-                **new_values:`kwargs`: new key value assignments to the values.
-
-            Returns:
-                the edited parameters
-        """
-        for param_name, param_val in new_values.items():
-            serialized_parameters['values'][param_name]['value']['new_value'] = param_val
-        return serialized_parameters
-
-    @classmethod
-    def prompt_edit_simulation_parameters(
+    def edit_simulation_parameters(
             cls,
             serialized_parameters: Dict,
-            prompt: bool = True,
+            prompt: bool = False,
             **changes) -> Dict:
         """Provide new values to the serialized_parameters dict and return the same
-            dict, but edited.
+            dict copy, but edited.
 
             Args:
                 serialized_parameters:`Dict`: params datastructure that will be edited.
                 prompt:`bool`: whether to prompt the user through the changes. Defaults to
-                    `True`.
+                    `False`.
+                changes:`Dict`:
 
             Returns:
-                the edited parameters
+                the edited parameters in Dict form
         """
+        user_changes = {**changes}
+        edited_params = serialized_parameters.copy()
+
         for i, param in enumerate(serialized_parameters['values']):
-            param_name = param['name']
-            if prompt:
-                param_val = input(f'Please enter the new value for {param_name}. Enter to skip: ')
-            else:
-                # if no kwargs passed
-                if not changes:
-                    param_val = serialized_parameters['values'][i]['value']['default']
-                #otherwise use kwargs
+            param_name = param['name']  # for example: 'Initial concentration of species "CDC28_Clb2_Sic1_Complex"'
+
+            def get_changes():
+                if prompt:
+                    return input(f'Please enter the new value for {param_name}. Enter to skip: ')
                 else:
-                    param_val = changes[param_name]
+                    for change_name, change_value in user_changes.items():
+                        # if no kwargs passed
+                        if change_name in param_name:
+                            return user_changes[change_name]
+                        #otherwise use kwargs
+                        else:
+                            return serialized_parameters['values'][i]['value']['default']
+
             # set value
-            serialized_parameters['values'][i]['value']['new_value'] = param_val
-        return serialized_parameters
+            param_val = get_changes()
+            edited_params['values'][i]['value']['new_value'] = param_val
+
+        #  return create_dynamic_class(model_name='EditedParameters', model_base=EditedParametersBase, **edited_params)
+        return edited_params
+
 
     @classmethod
     def generate_model(
@@ -178,59 +173,50 @@ class ArchiveEditorApi:
         return Model(model_id, model_name, model_source, model_language, changes)
 
     @classmethod
-    def generate_sed_doc_from_changed_model(
-            cls,
-            uploaded_archive: CombineArchive,
-            extraction_dir: str,
-            kisao_id: str = None,
-            **changes
-    ) -> ChangedSedDocument:
-        """Introspect uploaded COMBINE/OMEX file for possible changes, apply user changes, and
+    def generate_sed_doc_from_introspection(cls, introspection: Dict, **changes) -> ChangedSedDocument:
+        """Apply user changes, and
             generate a new sed doc from the changes.
 
             Args:
-                uploaded_archive:`CombineArchive`: archive from which possible changes will be inferred.
-                extraction_dir:`str`: dirpath into which the archive contents will be extracted.
-                kisao_id:`str`: id of the simulation algorithm. Defaults to `None`.
+                introspection:`Dict`: that which is generated from cls.introspect_archive
                 **changes:`kwargs`, `Dict[str, str]`: key/value change specifications where param target names are
                     keys and new values are the values in string form.
 
             Returns:
-                `SedDocument` instance configured with user changes.
+                `ChangedSedDocument` instance configured with user changes.
+                    This object is an isomorphism with SedDocument.
         """
-        # gather introspection
-        introspection = cls.introspect_archive(
-            uploaded_archive=uploaded_archive,
-            extraction_dir=extraction_dir,
-            kisao_id=kisao_id)
-
         # source model params
-        sim_type = introspection['sim_type']
         sim_model = introspection['sim_model']
         model_lang = introspection['model_lang']
         model_source = introspection['model_source']
-        changed_attributes = cls.edit_simulation_parameters(
+
+        # get serialized changes
+        changed_attributes: Dict = cls.edit_simulation_parameters(
             serialized_parameters=introspection,
+            prompt=False,
             **changes)
-        # changed_attributes = cls.prompt_edit_simulation_parameters(introspection)
+
+
         # remove old changes to existing model/introspection
-        introspection['sim_model'].changes.clear()
+        changed_attributes['sim_model'].changes.clear()
 
         # add new changes
-        for param in introspection['values']:
-            param_values = param.pop('value')
-            val = param_values['new_value']  # or param_values['default']
+        for param in changed_attributes['values']:
+            param_values: Dict = param.pop('value')
+            default_val = param_values['default']
+            val = param_values.get('new_value', default_val)  # TODO: remove earlier handling of this
             attribute_change = ModelAttributeChange(
                 id=param['id'],
                 name=param['name'],
                 target=param['target'],
                 target_namespaces=param['target_namespaces'],
                 new_value=str(val))
-            introspection['sim_model'].changes.append(attribute_change)
+            changed_attributes['sim_model'].changes.append(attribute_change)
 
         sed_doc = ChangedSedDocument(
-            models=[introspection['sim_model']],
-            simulations=introspection['simulation'])
+            models=[changed_attributes['sim_model']],
+            simulations=changed_attributes['simulation'])
         return sed_doc
 
     @classmethod
@@ -262,6 +248,11 @@ class ArchiveEditorApi:
             uploaded_archive: CombineArchive,
             extraction_dir: str,
             kisao_id: str = None) -> Dict:
+        """Introspect archive simulation and return a dict of serialized, editable params.
+
+            Returns:
+                `Dict` of serialized, editable params
+        """
         # TODO: add this to the yaml spec
         for content in uploaded_archive.contents:
             if 'sedml' in content.location:
@@ -282,14 +273,10 @@ class ArchiveEditorApi:
                             sim_type=sim_type,
                             kisao_id=kisao_id)
 
-                        # get the objects
+                        # get the params in serialized form and set the objects
                         editable_params = cls.parse_editable_params(attributes)
-                        # for param in editable_params:
-                        #     pp(param)
-
-                        serialized_editable_params = cls._get_serialized_params(editable_params)
+                        serialized_editable_params = cls.serialize_params(editable_params)
                         serialized_editable_params['simulation'] = sim
-                        serialized_editable_params['sim_type'] = sim_type
                         serialized_editable_params['sim_model'] = sim_model
                         serialized_editable_params['model_lang'] = model_lang
                         serialized_editable_params['model_source'] = model_fp
@@ -365,17 +352,15 @@ class ArchiveEditorApi:
         temp_extraction_dir = tempfile.mkdtemp()
         uploaded_archive: CombineArchive = cls.read_omex(omex_fp, temp_extraction_dir)
 
-        # get editable params as dict
-        serialized_editable_params = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
+        # get editable params
+        serialized_introspection: Dict = cls.introspect_archive(uploaded_archive, temp_extraction_dir, kisao_id)
 
-        pp(serialized_editable_params['values'][0])
-
-        # generate new sed doc and write it to temp dir
-        adjusted_sed_doc: ChangedSedDocument = cls.generate_sed_doc_from_changed_model(
-            uploaded_archive=uploaded_archive,
-            extraction_dir=temp_extraction_dir,
-            kisao_id=kisao_id,
+        # generate new sed doc
+        adjusted_sed_doc: ChangedSedDocument = cls.generate_sed_doc_from_introspection(
+            introspection=serialized_introspection,
             **changes_to_apply)
+
+        # write new doc to temp extraction dir
         adjusted_sed_fp = os.path.join(temp_extraction_dir, 'adjusted_simulation.sedml')
         cls.write_changed_sed_doc(
             doc=adjusted_sed_doc,
@@ -413,7 +398,7 @@ def test_editor():
     fp = os.path.join(
         file_src_root,
         'Ciliberto-J-Cell-Biol-2003-morphogenesis-checkpoint-continuous.omex')
-    ArchiveEditorApi.run(omex_fp=fp)
+    ArchiveEditorApi.run(omex_fp=fp, flag={'value': '2.2323'})
 
 
 test_editor()
