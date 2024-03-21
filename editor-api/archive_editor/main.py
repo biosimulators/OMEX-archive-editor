@@ -1,29 +1,29 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Response
-from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
-import uvicorn
-from pydantic import BaseModel, Field
 import os
 import json
 from tempfile import TemporaryDirectory, mkdtemp
 import shutil  # For copying files
+from typing import Optional
+
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Response
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
 from archive_editor.api import ArchiveEditorApi
+from archive_editor.aio import get_archive_file_response
 from archive_editor.data_model import (
     SuccessfulSimulationEditConfirmation, 
     UnsuccessfulSimulationEditConfirmation,
-    SimulationEditResult
+    SimulationEditResult,
+    SimulationEditRequest,
+    ArchiveDownloadResponse
 )
 
 
 app = FastAPI(title="editor-api", version="1.0.0")
 
+
 # TODO: Change this to Settings/S3
-edited_files_storage = mkdtemp()
-
-
-class SimulationEditRequest(BaseModel):
-    changes_to_apply: dict = Field(..., description="Changes to apply, referenced by the name of the value you want to change.")
+EDITED_FILES_STORAGE_DIR = mkdtemp()
 
 
 @app.get("/")
@@ -33,13 +33,13 @@ async def root():
 
 @app.post(
     "/edit_simulation/",
-    response_model=SimulationEditConfirmation,
+    response_model=SuccessfulSimulationEditConfirmation,
     name="Edit Archive Simulation",
     operation_id="edit-simulation")
 async def edit_simulation(
         archive: UploadFile = File(...),
         edit_request_str: str = Form(...),
-        new_omex_filename: str = Form(...)) -> SimulationEditConfirmation:
+        new_omex_filename: str = Form(...)) -> SuccessfulSimulationEditConfirmation:
     try:
         edit_request = json.loads(edit_request_str)
         edit_request_model = SimulationEditRequest(**edit_request)
@@ -51,27 +51,27 @@ async def edit_simulation(
 
             result: SimulationEditResult = ArchiveEditorApi.run(omex_fp=file_path, **edit_request_model.dict())
 
-            # Instead of deleting, move the edited file to the edited_files_storage
-            edited_file_path = os.path.join(edited_files_storage, f"{new_omex_filename}.omex")
+            # move the edited dir to the temp "database"
+            edited_file_path = os.path.join(EDITED_FILES_STORAGE_DIR, f"{new_omex_filename}.omex")
             shutil.move(file_path, edited_file_path)
 
         return SuccessfulSimulationEditConfirmation(download_link=f"/download/{edited_file_path}").model_dump()
     except Exception as e:
-        result = UnsuccessfulSimulationEditConfirmation(
-            error=HTTPException(status_code=500, detail=str(e)),
-            exception=e)
-        # raise HTTPException(status_code=500, detail=str(e))
-        return result.model_dump()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/download/{file_identifier}")
-async def download_edited_file(file_identifier: str):
+@app.get(
+    "/download/{file_identifier}",
+    response_model=ArchiveDownloadResponse,
+    name="Download COMBINE archive",
+    operation_id="download-archive")
+async def download_edited_file(file_identifier: str) -> ArchiveDownloadResponse:
     """Serve the edited COMBINE archive for download."""
-    file_path = os.path.join(edited_files_storage, f"{file_identifier}.omex")
-    if os.path.exists(file_path):
-        return FileResponse(path=file_path, filename=f"{file_identifier}.omex", media_type='application/octet-stream')
-    else:
-        raise HTTPException(status_code=404, detail="File not found.")
+    try:
+        response = await get_archive_file_response(file_identifier, EDITED_FILES_STORAGE_DIR)
+        return response 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

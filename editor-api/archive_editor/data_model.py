@@ -1,27 +1,33 @@
 from dataclasses import dataclass, asdict, field
-from pydantic import BaseModel as Base, create_model, ConfigDict, field_validator
-from typing import Union, Dict, List, Tuple
+from typing import Union, Dict, List, Tuple, Optional
+
+from pydantic import BaseModel as PydanticBaseModel, create_model, ConfigDict, field_validator, Field
 from fastapi import HTTPException
+from fastapi.responses import FileResponse
 from biosimulators_utils.combine.data_model import CombineArchive
 from biosimulators_utils.sedml.data_model import SedDocument, Model, Simulation
 
 
-class BaseModel(Base):
+# REST/FastAPI-related classes
+class BaseModel(PydanticBaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def create_dynamic_class(model_name, model_base, **params) -> BaseModel:
+def create_dynamic_class(dynamic_model_name: str, model_base: BaseModel, **params) -> BaseModel:
     dynamic_config_types = {}
     for param_name, param_val in params.items():
         dynamic_config_types[param_name] = (type(param_val), ...)
 
     Dynamic = create_model(
-        __model_name=model_name,
+        __model_name=dynamic_model_name,
         __base__=model_base,
         **dynamic_config_types)
-
-    # return edited_params
+    
     return Dynamic(**params)
+
+
+class SimulationEditRequest(BaseModel):
+    changes_to_apply: dict = Field(..., description="Changes to apply, referenced by the name of the value you want to change.")
 
 
 class EditedParametersBase(BaseModel):
@@ -33,7 +39,7 @@ class SerializedParametersBase(BaseModel):
 
 
 class ResultConfirmation(BaseModel):
-    message: str 
+    message: Optional[str] = None  
     
     
 class UnsuccessfulSimulationEditConfirmation(ResultConfirmation):
@@ -41,22 +47,32 @@ class UnsuccessfulSimulationEditConfirmation(ResultConfirmation):
     exception: Exception
     error: HTTPException
     
-    @field_validator('error')
-    @classmethod
-    def raise_error(cls, error: HTTPException):
-        return error(status_code=500, detail=str(cls.exception))
-    
     
 class SuccessfulSimulationEditConfirmation(BaseModel):
     message: str = "Simulation edited successfully."
     download_link: str
+    
+
+class ArchiveDownloadResponse(BaseModel):
+    path: str 
+    filename: str 
+    media_type: str  # ie: 'application/octet-stream'
+    
+        
+class PydanticExtendedModel(BaseModel, FileResponse):
+    # Redefining fields with Pydantic's Field for validation
+    name: str = Field(..., min_length=1)
+    age: int = Field(..., gt=0)
+
+    additional_field: str
 
 
+##### --- COMBINE/SEDML-based classes
 @dataclass
 class ParameterTarget:
-    prefix: str = None  # ie: "/sbml:sbml/sbml:model/sbml:listOfSpecies/sbml:species
-    id: str = None  # found within [@id=''], for example 'Cdh1'
-    _type: str = None  # found after id with an @, for example '@initialConcentration'
+    prefix: Optional[str]  # ie: "/sbml:sbml/sbml:model/sbml:listOfSpecies/sbml:species
+    id: Optional[str]  # found within [@id=''], for example 'Cdh1'
+    _type: Optional[str]  # found after id with an @, for example '@initialConcentration'
 
     def __init__(self, value: str):
         """Datamodel object for SEDML parameter URIs.
