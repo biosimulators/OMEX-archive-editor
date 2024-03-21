@@ -30,6 +30,9 @@ class SimulationEditRequest(BaseModel):
     changes_to_apply: dict = Field(..., description="Changes to apply, referenced by the name of the value you want to change.")
 
 
+class ArchiveDownloadRequest(BaseModel):
+    file_source: str 
+
 class EditedParametersBase(BaseModel):
     pass
 

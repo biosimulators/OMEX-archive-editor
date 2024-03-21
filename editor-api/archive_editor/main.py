@@ -5,6 +5,7 @@ import shutil  # For copying files
 from typing import Optional
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Response
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -15,6 +16,7 @@ from archive_editor.data_model import (
     UnsuccessfulSimulationEditConfirmation,
     SimulationEditResult,
     SimulationEditRequest,
+    ArchiveDownloadRequest,
     ArchiveDownloadResponse
 )
 
@@ -62,12 +64,14 @@ async def edit_simulation(
 
 @app.get(
     "/download/{file_identifier}",
-    response_model=ArchiveDownloadResponse,
+    # response_model=ArchiveDownloadResponse,
     name="Download COMBINE archive",
     operation_id="download-archive")
-async def download_edited_file(file_identifier: str) -> ArchiveDownloadResponse:
+async def download_edited_file(file_identifier: str) -> FileResponse: # ArchiveDownloadResponse:
     """Serve the edited COMBINE archive for download."""
     try:
+        file_id = json.loads(file_identifier)
+        download_request = ArchiveDownloadRequest(**file_id)
         response = await get_archive_file_response(file_identifier, EDITED_FILES_STORAGE_DIR)
         return response 
     except Exception as e:
