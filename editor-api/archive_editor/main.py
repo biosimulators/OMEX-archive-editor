@@ -55,13 +55,13 @@ async def edit_simulation(
             edited_file_path = os.path.join(edited_files_storage, f"{new_omex_filename}.omex")
             shutil.move(file_path, edited_file_path)
 
-        return SuccessfulSimulationEditConfirmation(download_link=f"/download/{edited_file_path}")
+        return SuccessfulSimulationEditConfirmation(download_link=f"/download/{edited_file_path}").model_dump()
     except Exception as e:
         result = UnsuccessfulSimulationEditConfirmation(
             error=HTTPException(status_code=500, detail=str(e)),
             exception=e)
         # raise HTTPException(status_code=500, detail=str(e))
-        raise result.error
+        return result.model_dump()
 
 
 @app.get("/download/{file_identifier}")
