@@ -29,7 +29,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SimulationEditConfirmation'
+                $ref: '#/components/schemas/SuccessfulSimulationEditConfirmation'
         '422':
           description: Validation Error
           content:
@@ -38,9 +38,9 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
   /download/{file_identifier}:
     get:
-      summary: Download Edited File
+      summary: Download Combine Archive
       description: Serve the edited COMBINE archive for download.
-      operationId: download_edited_file_download__file_identifier__get
+      operationId: download-archive
       parameters:
       - name: file_identifier
         in: path
@@ -53,7 +53,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/ArchiveDownloadResponse'
         '422':
           description: Validation Error
           content:
@@ -62,6 +63,23 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    ArchiveDownloadResponse:
+      properties:
+        path:
+          type: string
+          title: Path
+        filename:
+          type: string
+          title: Filename
+        media_type:
+          type: string
+          title: Media Type
+      type: object
+      required:
+      - path
+      - filename
+      - media_type
+      title: ArchiveDownloadResponse
     Body_edit-simulation:
       properties:
         archive:
@@ -71,10 +89,14 @@ components:
         edit_request_str:
           type: string
           title: Edit Request Str
+        new_omex_filename:
+          type: string
+          title: New Omex Filename
       type: object
       required:
       - archive
       - edit_request_str
+      - new_omex_filename
       title: Body_edit-simulation
     HTTPValidationError:
       properties:
@@ -85,7 +107,7 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
-    SimulationEditConfirmation:
+    SuccessfulSimulationEditConfirmation:
       properties:
         message:
           type: string
@@ -97,7 +119,7 @@ components:
       type: object
       required:
       - download_link
-      title: SimulationEditConfirmation
+      title: SuccessfulSimulationEditConfirmation
     ValidationError:
       properties:
         loc:
