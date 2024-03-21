@@ -9,7 +9,11 @@ import json
 from tempfile import TemporaryDirectory, mkdtemp
 import shutil  # For copying files
 from archive_editor.api import ArchiveEditorApi
-from archive_editor.data_model import SimulationEditConfirmation, SimulationEditResult
+from archive_editor.data_model import (
+    SuccessfulSimulationEditConfirmation, 
+    UnsuccessfulSimulationEditConfirmation,
+    SimulationEditResult
+)
 
 
 app = FastAPI(title="editor-api", version="1.0.0")
@@ -51,9 +55,13 @@ async def edit_simulation(
             edited_file_path = os.path.join(edited_files_storage, f"{new_omex_filename}.omex")
             shutil.move(file_path, edited_file_path)
 
-        return SimulationEditConfirmation(download_link=f"/download/{edited_file_path}")
+        return SuccessfulSimulationEditConfirmation(download_link=f"/download/{edited_file_path}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        result = UnsuccessfulSimulationEditConfirmation(
+            error=HTTPException(status_code=500, detail=str(e)),
+            exception=e)
+        # raise HTTPException(status_code=500, detail=str(e))
+        raise result.error
 
 
 @app.get("/download/{file_identifier}")

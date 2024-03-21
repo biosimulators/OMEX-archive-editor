@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict, field
-from pydantic import BaseModel as Base, create_model, ConfigDict
+from pydantic import BaseModel as Base, create_model, ConfigDict, field_validator
 from typing import Union, Dict, List, Tuple
+from fastapi import HTTPException
 from biosimulators_utils.combine.data_model import CombineArchive
 from biosimulators_utils.sedml.data_model import SedDocument, Model, Simulation
 
@@ -31,7 +32,22 @@ class SerializedParametersBase(BaseModel):
     pass
 
 
-class SimulationEditConfirmation(BaseModel):
+class ResultConfirmation(BaseModel):
+    message: str 
+    
+    
+class UnsuccessfulSimulationEditConfirmation(ResultConfirmation):
+    message: str = "Could not successfully edit the simulation"
+    exception: Exception
+    error: HTTPException
+    
+    @field_validator('error')
+    @classmethod
+    def raise_error(cls, error: HTTPException):
+        return error(status_code=500, detail=str(cls.exception))
+    
+    
+class SuccessfulSimulationEditConfirmation(BaseModel):
     message: str = "Simulation edited successfully."
     download_link: str
 
